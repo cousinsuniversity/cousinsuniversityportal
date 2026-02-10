@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLSU-SIS | Administration Portal</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="firebase-config.js" defer></script>
+    <script src="admin.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="university-branding">
+                <div class="logo-container">
+                    <i class="fas fa-university logo-icon"></i>
+                </div>
+                <div class="university-info">
+                    <h1>SOUTHERN LEYTE STATE UNIVERSITY</h1>
+                    <p class="tagline">Student Information System</p>
+                    <p class="system-name">Administration Portal</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="user-welcome">
+                    <p>Administrator: <span id="adminName">Admin User</span></p>
+                    <p id="adminRole">Role: System Administrator</p>
+                </div>
+                <button id="adminLogoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-nav">
+                <a href="#" class="nav-item active" data-panel="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Admin Dashboard
+                </a>
+                <a href="#" class="nav-item" data-panel="enrollmentControl">
+                    <i class="fas fa-toggle-on"></i> Enrollment Control
+                </a>
+                <a href="#" class="nav-item" data-panel="applications">
+                    <i class="fas fa-clipboard-list"></i> Pending Applications
+                </a>
+                <a href="#" class="nav-item" data-panel="studentManagement">
+                    <i class="fas fa-users"></i> Student Management
+                </a>
+                <a href="#" class="nav-item" data-panel="grading">
+                    <i class="fas fa-edit"></i> Grading System
+                </a>
+                <a href="#" class="nav-item" data-panel="reports">
+                    <i class="fas fa-chart-pie"></i> Reports & Analytics
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Panel -->
+            <div id="dashboardPanel" class="dashboard-panel active">
+                <div class="panel-header">
+                    <h2><i class="fas fa-tachometer-alt"></i> Administration Dashboard</h2>
+                    <p class="panel-description">System overview and quick access to administrative functions</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>System Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalStudents">0</div>
+                            <div class="stat-label">Total Students</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="pendingApplications">0</div>
+                            <div class="stat-label">Pending Applications</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="enrollmentStatusBadge">OFF</div>
+                            <div class="stat-label">Enrollment Status</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="facultyCount">0</div>
+                            <div class="stat-label">Faculty Members</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enrollment Control Panel -->
+            <div id="enrollmentControlPanel" class="dashboard-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-toggle-on"></i> Enrollment System Control</h2>
+                    <p class="panel-description">Master control for student enrollment system</p>
+                </div>
+
+                <div class="admin-controls">
+                    <h3>Master Enrollment Toggle</h3>
+                    <p class="control-description">This switch controls whether new students can submit enrollment applications through the public portal.</p>
+                    
+                    <div class="toggle-container">
+                        <span class="toggle-label">Enrollment Status:</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="masterToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span id="toggleStatusLabel" class="status-label">CLOSED</span>
+                    </div>
+                    
+                    <div class="toggle-description">
+                        <p><strong>ON:</strong> New students can submit enrollment applications.</p>
+                        <p><strong>OFF:</strong> Enrollment is closed. The form will be hidden from the public portal.</p>
+                    </div>
+                    
+                    <button id="saveToggleBtn" class="btn-login">
+                        <i class="fas fa-save"></i> Save Enrollment Settings
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pending Applications Panel -->
+            <div id="applicationsPanel" class="dashboard-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-clipboard-list"></i> Pending Enrollment Applications</h2>
+                    <p class="panel-description">Review and process new student applications</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>Applications Awaiting Review</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Application ID</th>
+                                <th>Student Name</th>
+                                <th>Email</th>
+                                <th>Program</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="applicationsTableBody">
+                            <!-- Applications loaded from Firestore -->
+                            <tr>
+                                <td colspan="6">Loading applications...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Grading System Panel -->
+            <div id="gradingPanel" class="dashboard-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-edit"></i> Grading System</h2>
+                    <p class="panel-description">Input and manage student grades</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>Select Student to Grade</h3>
+                    <div class="form-group">
+                        <select id="studentSelect" class="grade-select">
+                            <option value="">Select a student...</option>
+                            <!-- Students loaded dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <div id="gradeEntrySection" style="display: none;">
+                    <div class="info-card">
+                        <h3>Grade Entry for: <span id="selectedStudentName"></span></h3>
+                        <div class="grade-input-section">
+                            <h4>Course Grades</h4>
+                            <div class="grade-grid">
+                                <input type="text" class="grade-input" id="course1Grade" placeholder="Course 1 Grade">
+                                <input type="text" class="grade-input" id="course2Grade" placeholder="Course 2 Grade">
+                                <input type="text" class="grade-input" id="course3Grade" placeholder="Course 3 Grade">
+                                <input type="text" class="grade-input" id="course4Grade" placeholder="Course 4 Grade">
+                                <input type="text" class="grade-input" id="course5Grade" placeholder="Course 5 Grade">
+                                <input type="text" class="grade-input" id="course6Grade" placeholder="Course 6 Grade">
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 1.5rem;">
+                                <label for="gradeRemarks">Remarks/Comments</label>
+                                <textarea id="gradeRemarks" rows="3" placeholder="Additional notes about grades..."></textarea>
+                            </div>
+                            
+                            <button id="submitGradesBtn" class="btn-enroll">
+                                <i class="fas fa-check-circle"></i> Submit Grades
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Application Details -->
+    <div id="applicationModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Application Details</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="modalApplicationDetails">
+                    <!-- Details loaded dynamically -->
+                </div>
+                <div class="modal-actions">
+                    <button id="approveApplicationBtn" class="btn-enroll">Approve Application</button>
+                    <button id="rejectApplicationBtn" class="btn-logout">Reject Application</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Admin portal functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    // Check if user is admin (in real system, check custom claims)
+                    initializeAdminPanel();
+                } else {
+                    window.location.href = 'index.html';
+                }
+            });
+            
+            // Logout button
+            document.getElementById('adminLogoutBtn').addEventListener('click', function() {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                });
+            });
+            
+            // Navigation
+            setupAdminNavigation();
+        });
+
+        function initializeAdminPanel() {
+            // Load enrollment toggle state
+            loadEnrollmentToggle();
+            
+            // Load pending applications
+            loadPendingApplications();
+            
+            // Load students for grading
+            loadStudentsForGrading();
+            
+            // Load statistics
+            loadSystemStatistics();
+            
+            // Set up toggle save button
+            document.getElementById('saveToggleBtn').addEventListener('click', saveEnrollmentToggle);
+            
+            // Set up grade submission
+            document.getElementById('submitGradesBtn').addEventListener('click', submitGrades);
+            
+            // Student selection for grading
+            document.getElementById('studentSelect').addEventListener('change', function() {
+                const studentId = this.value;
+                if (studentId) {
+                    document.getElementById('gradeEntrySection').style.display = 'block';
+                    document.getElementById('selectedStudentName').textContent = 
+                        this.options[this.selectedIndex].text;
+                } else {
+                    document.getElementById('gradeEntrySection').style.display = 'none';
+                }
+            });
+        }
+
+        function loadEnrollmentToggle() {
+            // Get current enrollment status from Firestore
+            db.collection("settings").doc("enrollment")
+                .onSnapshot((doc) => {
+                    const toggle = document.getElementById('masterToggle');
+                    const statusLabel = document.getElementById('toggleStatusLabel');
+                    const statusBadge = document.getElementById('enrollmentStatusBadge');
+                    
+                    if (doc.exists && doc.data().status === 'open') {
+                        toggle.checked = true;
+                        statusLabel.textContent = 'OPEN';
+                        statusLabel.style.color = 'var(--success-green)';
+                        statusBadge.textContent = 'OPEN';
+                        statusBadge.style.color = 'var(--success-green)';
+                    } else {
+                        toggle.checked = false;
+                        statusLabel.textContent = 'CLOSED';
+                        statusLabel.style.color = 'var(--danger-red)';
+                        statusBadge.textContent = 'CLOSED';
+                        statusBadge.style.color = 'var(--danger-red)';
+                    }
+                });
+        }
+
+        function saveEnrollmentToggle() {
+            const toggle = document.getElementById('masterToggle');
+            const status = toggle.checked ? 'open' : 'closed';
+            
+            // Update Firestore
+            db.collection("settings").doc("enrollment").set({
+                status: status,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedBy: auth.currentUser.email
+            })
+            .then(() => {
+                alert(`Enrollment has been ${status.toUpperCase()}. The public portal will update in real-time.`);
+            })
+            .catch((error) => {
+                console.error("Error updating enrollment status:", error);
+                alert("Error saving settings. Please try again.");
+            });
+        }
+
+        function loadPendingApplications() {
+            // Real-time listener for applications
+            db.collection("applications")
+                .where("status", "==", "pending")
+                .orderBy("submittedAt", "desc")
+                .onSnapshot((querySnapshot) => {
+                    const applicationsTableBody = document.getElementById('applicationsTableBody');
+                    applicationsTableBody.innerHTML = '';
+                    
+                    let count = 0;
+                    
+                    querySnapshot.forEach((doc) => {
+                        count++;
+                        const data = doc.data();
+                        const row = document.createElement('tr');
+                        
+                        // Format date
+                        const submittedDate = data.submittedAt ? 
+                            data.submittedAt.toDate().toLocaleDateString() : 'N/A';
+                        
+                        row.innerHTML = `
+                            <td>${doc.id.substring(0, 8)}...</td>
+                            <td>${data.firstName} ${data.lastName}</td>
+                            <td>${data.email}</td>
+                            <td>${data.program}</td>
+                            <td>${submittedDate}</td>
+                            <td>
+                                <button class="btn-view" onclick="viewApplication('${doc.id}')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        `;
+                        
+                        applicationsTableBody.appendChild(row);
+                    });
+                    
+                    // Update statistics
+                    document.getElementById('pendingApplications').textContent = count;
+                    
+                    if (count === 0) {
+                        applicationsTableBody.innerHTML = `
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem;">
+                                    No pending applications at this time.
+                                </td>
+                            </tr>
+                        `;
+                    }
+                }, (error) => {
+                    console.error("Error loading applications:", error);
+                });
+        }
+
+        function viewApplication(applicationId) {
+            // Fetch application details
+            db.collection("applications").doc(applicationId).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        const modal = document.getElementById('applicationModal');
+                        const details = document.getElementById('modalApplicationDetails');
+                        
+                        details.innerHTML = `
+                            <div class="application-detail">
+                                <strong>Application ID:</strong> ${applicationId}
+                            </div>
+                            <div class="application-detail">
+                                <strong>Name:</strong> ${data.firstName} ${data.lastName}
+                            </div>
+                            <div class="application-detail">
+                                <strong>Email:</strong> ${data.email}
+                            </div>
+                            <div class="application-detail">
+                                <strong>Student ID Requested:</strong> ${data.studentId}
+                            </div>
+                            <div class="application-detail">
+                                <strong>Program:</strong> ${data.program}
+                            </div>
+                            <div class="application-detail">
+                                <strong>Phone:</strong> ${data.phone || 'Not provided'}
+                            </div>
+                            <div class="application-detail">
+                                <strong>Address:</strong> ${data.address || 'Not provided'}
+                            </div>
+                            <div class="application-detail">
+                                <strong>Submitted:</strong> ${data.submittedAt ? 
+                                    data.submittedAt.toDate().toLocaleString() : 'N/A'}
+                            </div>
+                        `;
+                        
+                        // Store current application ID for actions
+                        details.dataset.applicationId = applicationId;
+                        
+                        // Show modal
+                        modal.style.display = 'block';
+                        
+                        // Set up modal close button
+                        document.querySelector('.close-modal').onclick = function() {
+                            modal.style.display = 'none';
+                        };
+                        
+                        // Set up approve/reject buttons
+                        document.getElementById('approveApplicationBtn').onclick = function() {
+                            processApplication(applicationId, 'approved');
+                        };
+                        
+                        document.getElementById('rejectApplicationBtn').onclick = function() {
+                            processApplication(applicationId, 'rejected');
+                        };
+                    }
+                });
+        }
+
+        function processApplication(applicationId, decision) {
+            // Update application status
+            db.collection("applications").doc(applicationId).update({
+                status: decision,
+                processedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                processedBy: auth.currentUser.email
+            })
+            .then(() => {
+                alert(`Application ${decision} successfully.`);
+                document.getElementById('applicationModal').style.display = 'none';
+                
+                // If approved, create student record (in real system)
+                if (decision === 'approved') {
+                    // You would create a student record here
+                    console.log(`Would create student record for ${applicationId}`);
+                }
+            })
+            .catch((error) => {
+                console.error("Error processing application:", error);
+                alert("Error processing application. Please try again.");
+            });
+        }
+
+        function loadStudentsForGrading() {
+            // Load students from Firestore
+            db.collection("students").get()
+                .then((querySnapshot) => {
+                    const studentSelect = document.getElementById('studentSelect');
+                    let count = 0;
+                    
+                    querySnapshot.forEach((doc) => {
+                        count++;
+                        const data = doc.data();
+                        const option = document.createElement('option');
+                        option.value = doc.id;
+                        option.textContent = `${data.firstName} ${data.lastName} (${data.studentId || 'No ID'})`;
+                        studentSelect.appendChild(option);
+                    });
+                    
+                    document.getElementById('totalStudents').textContent = count;
+                    
+                    if (count === 0) {
+                        const option = document.createElement('option');
+                        option.textContent = 'No students found';
+                        option.disabled = true;
+                        studentSelect.appendChild(option);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error loading students:", error);
+                });
+        }
+
+        function submitGrades() {
+            const studentId = document.getElementById('studentSelect').value;
+            if (!studentId) {
+                alert("Please select a student first.");
+                return;
+            }
+            
+            // Collect grades
+            const grades = {
+                course1: document.getElementById('course1Grade').value,
+                course2: document.getElementById('course2Grade').value,
+                course3: document.getElementById('course3Grade').value,
+                course4: document.getElementById('course4Grade').value,
+                course5: document.getElementById('course5Grade').value,
+                course6: document.getElementById('course6Grade').value,
+                remarks: document.getElementById('gradeRemarks').value,
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                submittedBy: auth.currentUser.email
+            };
+            
+            // Save to Firestore
+            db.collection("students").doc(studentId).collection("grades").add(grades)
+                .then(() => {
+                    alert("Grades submitted successfully. The student portal will update in real-time.");
+                    
+                    // Clear form
+                    document.querySelectorAll('.grade-input').forEach(input => {
+                        input.value = '';
+                    });
+                    document.getElementById('gradeRemarks').value = '';
+                })
+                .catch((error) => {
+                    console.error("Error submitting grades:", error);
+                    alert("Error submitting grades. Please try again.");
+                });
+        }
+
+        function loadSystemStatistics() {
+            // Load various statistics (simplified)
+            // In a real system, you'd have more complex queries
+            db.collection("students").get()
+                .then((querySnapshot) => {
+                    document.getElementById('totalStudents').textContent = querySnapshot.size;
+                });
+                
+            // You would load faculty count, etc. here
+        }
+
+        function setupAdminNavigation() {
+            const navItems = document.querySelectorAll('.nav-item');
+            const panels = document.querySelectorAll('.dashboard-panel');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const targetPanel = this.getAttribute('data-panel');
+                    
+                    panels.forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+                    
+                    document.getElementById(`${targetPanel}Panel`).classList.add('active');
+                });
+            });
+        }
+    </script>
+</body>
+</html>
