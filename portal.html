@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLSU-SIS | Student Portal</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="firebase-config.js" defer></script>
+    <script src="portal.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="university-branding">
+                <div class="logo-container">
+                    <i class="fas fa-university logo-icon"></i>
+                </div>
+                <div class="university-info">
+                    <h1>SOUTHERN LEYTE STATE UNIVERSITY</h1>
+                    <p class="tagline">Student Information System</p>
+                    <p class="system-name">Student Portal</p>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="user-welcome">
+                    <p>Welcome, <span id="studentName">Loading...</span></p>
+                    <p id="studentId">ID: Loading...</p>
+                </div>
+                <button id="logoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="sidebar-nav">
+                <a href="#" class="nav-item active" data-panel="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="#" class="nav-item" data-panel="enrollment">
+                    <i class="fas fa-clipboard-check"></i> Enrollment Status
+                </a>
+                <a href="#" class="nav-item" data-panel="grades">
+                    <i class="fas fa-chart-bar"></i> Grades & Records
+                </a>
+                <a href="#" class="nav-item" data-panel="courses">
+                    <i class="fas fa-book-open"></i> My Courses
+                </a>
+                <a href="#" class="nav-item" data-panel="profile">
+                    <i class="fas fa-user-circle"></i> Student Profile
+                </a>
+                <a href="#" class="nav-item" data-panel="documents">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Panel -->
+            <div id="dashboardPanel" class="dashboard-panel active">
+                <div class="panel-header">
+                    <h2><i class="fas fa-tachometer-alt"></i> Student Dashboard</h2>
+                    <p class="panel-description">Overview of your academic information and important announcements</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>Academic Summary</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-label">Current Semester</div>
+                            <div class="summary-value">Second Semester 2025-2026</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Status</div>
+                            <div class="summary-value" id="enrollmentStatus">Checking...</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Program</div>
+                            <div class="summary-value" id="studentProgram">Loading...</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">GPA</div>
+                            <div class="summary-value" id="studentGPA">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Recent Announcements</h3>
+                    <div id="announcementsList">
+                        <!-- Announcements loaded from Firestore -->
+                        <div class="announcement">
+                            <div class="announcement-title">Enrollment for Next Semester</div>
+                            <div class="announcement-date">February 15, 2025</div>
+                            <div class="announcement-content">Enrollment for the first semester of AY 2026-2027 will open on March 1, 2025.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grades Panel -->
+            <div id="gradesPanel" class="dashboard-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-chart-bar"></i> Grades & Academic Records</h2>
+                    <p class="panel-description">Your current grades and academic performance</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>Current Semester Grades</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Course Code</th>
+                                <th>Course Title</th>
+                                <th>Units</th>
+                                <th>Midterm Grade</th>
+                                <th>Final Grade</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gradesTableBody">
+                            <!-- Grades loaded from Firestore -->
+                            <tr>
+                                <td colspan="6">Loading your grades...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="info-card">
+                    <h3>Grade Point Average</h3>
+                    <div class="gpa-display">
+                        <div class="gpa-value" id="currentGPA">0.00</div>
+                        <div class="gpa-label">CURRENT GPA</div>
+                        <div class="gpa-scale">Scale: 1.00 (Highest) - 5.00 (Lowest)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other panels would follow similar structure -->
+            <div id="enrollmentPanel" class="dashboard-panel">
+                <!-- Enrollment status content -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Student portal functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize user session
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    // User is signed in
+                    loadStudentData(user.uid);
+                    setupNavigation();
+                    
+                    // Real-time grade updates
+                    setupRealtimeGrades(user.uid);
+                } else {
+                    // No user signed in, redirect to login
+                    window.location.href = 'index.html';
+                }
+            });
+            
+            // Logout button
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                });
+            });
+        });
+
+        function loadStudentData(userId) {
+            // In a real system, you'd fetch from Firestore
+            // For this example, we'll use a simulated student
+            document.getElementById('studentName').textContent = 'Juan Dela Cruz';
+            document.getElementById('studentId').textContent = 'ID: 2025-00123';
+            document.getElementById('studentProgram').textContent = 'BS Computer Science';
+            document.getElementById('enrollmentStatus').textContent = 'Enrolled';
+            document.getElementById('enrollmentStatus').style.color = 'var(--success-green)';
+            
+            // Load actual data from Firestore if it exists
+            db.collection("students").doc(userId).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        document.getElementById('studentName').textContent = 
+                            `${data.firstName} ${data.lastName}`;
+                        document.getElementById('studentProgram').textContent = data.program || 'Not specified';
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error loading student data:", error);
+                });
+        }
+
+        function setupRealtimeGrades(userId) {
+            // Listen for real-time updates to grades
+            db.collection("students").doc(userId).collection("grades")
+                .onSnapshot((querySnapshot) => {
+                    const gradesTableBody = document.getElementById('gradesTableBody');
+                    gradesTableBody.innerHTML = '';
+                    
+                    let totalGradePoints = 0;
+                    let totalUnits = 0;
+                    
+                    querySnapshot.forEach((doc) => {
+                        const gradeData = doc.data();
+                        const row = document.createElement('tr');
+                        
+                        // Calculate grade points (simplified)
+                        const gradeValue = parseFloat(gradeData.finalGrade) || 0;
+                        const units = parseFloat(gradeData.units) || 3;
+                        
+                        if (gradeValue > 0) {
+                            totalGradePoints += gradeValue * units;
+                            totalUnits += units;
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${gradeData.courseCode || 'N/A'}</td>
+                            <td>${gradeData.courseTitle || 'N/A'}</td>
+                            <td>${units}</td>
+                            <td>${gradeData.midtermGrade || 'N/A'}</td>
+                            <td>${gradeData.finalGrade || 'Pending'}</td>
+                            <td>${gradeData.remarks || '—'}</td>
+                        `;
+                        
+                        gradesTableBody.appendChild(row);
+                    });
+                    
+                    // Calculate and display GPA
+                    if (totalUnits > 0) {
+                        const gpa = totalGradePoints / totalUnits;
+                        document.getElementById('currentGPA').textContent = gpa.toFixed(2);
+                        document.getElementById('studentGPA').textContent = gpa.toFixed(2);
+                    }
+                }, (error) => {
+                    console.error("Error loading grades:", error);
+                });
+        }
+
+        function setupNavigation() {
+            // Panel switching functionality
+            const navItems = document.querySelectorAll('.nav-item');
+            const panels = document.querySelectorAll('.dashboard-panel');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all items
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    // Add active class to clicked item
+                    this.classList.add('active');
+                    
+                    // Get target panel
+                    const targetPanel = this.getAttribute('data-panel');
+                    
+                    // Hide all panels
+                    panels.forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+                    
+                    // Show target panel
+                    document.getElementById(`${targetPanel}Panel`).classList.add('active');
+                });
+            });
+        }
+    </script>
+</body>
+</html>
