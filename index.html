@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLSU-SIS | Southern Leyte State University</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="firebase-config.js" defer></script>
+    <script src="portal.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <header class="main-header">
+            <div class="university-branding">
+                <div class="logo-container">
+                    <i class="fas fa-university logo-icon"></i>
+                </div>
+                <div class="university-info">
+                    <h1>SOUTHERN LEYTE STATE UNIVERSITY</h1>
+                    <p class="tagline">Student Information System</p>
+                    <p class="system-name">SLSU-SIS Portal</p>
+                </div>
+            </div>
+            <div class="academic-year">
+                <p>Academic Year 2025-2026</p>
+                <p>Second Semester</p>
+            </div>
+        </header>
+
+        <main class="auth-container">
+            <div class="login-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-sign-in-alt"></i> Student & Faculty Login</h2>
+                    <p class="subtitle">Access your academic dashboard</p>
+                </div>
+
+                <div class="card-body">
+                    <!-- Login Form -->
+                    <form id="loginForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="email"><i class="fas fa-envelope"></i> University Email</label>
+                            <input type="email" id="email" placeholder="student.number@slsu.edu.ph" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password"><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="password" placeholder="Enter your password" required>
+                            <div class="password-options">
+                                <label class="remember-me">
+                                    <input type="checkbox"> Remember me
+                                </label>
+                                <a href="#" class="forgot-password">Forgot Password?</a>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn-login">
+                                <i class="fas fa-sign-in-alt"></i> Login to Portal
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="divider">
+                        <span>New Student?</span>
+                    </div>
+
+                    <!-- Status Alert (for enrollment toggle) -->
+                    <div id="statusAlert" class="status-alert">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="statusMessage">Checking enrollment status...</span>
+                    </div>
+
+                    <!-- Enrollment Form (conditionally shown) -->
+                    <form id="enrollmentForm" class="auth-form enrollment-form">
+                        <h3><i class="fas fa-user-plus"></i> New Student Enrollment</h3>
+                        <p class="form-description">Complete this form to apply for enrollment.</p>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="firstName">First Name *</label>
+                                <input type="text" id="firstName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="lastName">Last Name *</label>
+                                <input type="text" id="lastName" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="enrollmentEmail">Email Address *</label>
+                            <input type="email" id="enrollmentEmail" placeholder="personal@example.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="studentId">Desired Student ID *</label>
+                            <input type="text" id="studentId" placeholder="e.g., 2025-00123" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="program">Program/Course *</label>
+                            <select id="program" required>
+                                <option value="">Select Program</option>
+                                <option value="BS Computer Science">BS Computer Science</option>
+                                <option value="BS Information Technology">BS Information Technology</option>
+                                <option value="BS Education">BS Education</option>
+                                <option value="BS Business Administration">BS Business Administration</option>
+                                <option value="BS Engineering">BS Engineering</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" placeholder="+63 912 345 6789">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="address">Home Address</label>
+                            <textarea id="address" rows="2"></textarea>
+                        </div>
+
+                        <div class="form-group terms-group">
+                            <input type="checkbox" id="terms" required>
+                            <label for="terms">I agree to the <a href="#">terms and conditions</a> of enrollment</label>
+                        </div>
+
+                        <button type="submit" class="btn-enroll">
+                            <i class="fas fa-paper-plane"></i> Submit Enrollment Application
+                        </button>
+                    </form>
+                </div>
+
+                <div class="card-footer">
+                    <p><i class="fas fa-exclamation-triangle"></i> For security, please log out and close your browser when finished.</p>
+                    <p class="support-contact">Technical Support: itsupport@slsu.edu.ph | (053) 123-4567</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="main-footer">
+            <p>© 2025 Southern Leyte State University. All Rights Reserved.</p>
+            <p>This system is for authorized use only. Unauthorized access is prohibited.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Real-time enrollment status check
+        document.addEventListener('DOMContentLoaded', function() {
+            checkEnrollmentStatus();
+        });
+
+        function checkEnrollmentStatus() {
+            db.collection("settings").doc("enrollment")
+                .onSnapshot((doc) => {
+                    const statusAlert = document.getElementById('statusAlert');
+                    const statusMessage = document.getElementById('statusMessage');
+                    const enrollmentForm = document.getElementById('enrollmentForm');
+
+                    if (doc.exists) {
+                        const data = doc.data();
+                        if (data.status === 'open') {
+                            statusAlert.className = 'status-alert status-open';
+                            statusMessage.textContent = '✓ Enrollment is currently OPEN. You may submit your application.';
+                            enrollmentForm.style.display = 'block';
+                        } else {
+                            statusAlert.className = 'status-alert status-closed';
+                            statusMessage.textContent = '✗ Enrollment is currently CLOSED. Please check back later.';
+                            enrollmentForm.style.display = 'none';
+                        }
+                    } else {
+                        // Default state if no document exists
+                        statusAlert.className = 'status-alert status-closed';
+                        statusMessage.textContent = '✗ Enrollment status unavailable.';
+                        enrollmentForm.style.display = 'none';
+                    }
+                }, (error) => {
+                    console.error("Error checking enrollment status: ", error);
+                    document.getElementById('statusMessage').textContent = 'Error loading status.';
+                });
+        }
+
+        // Enrollment form submission
+        document.getElementById('enrollmentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const enrollmentData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('enrollmentEmail').value,
+                studentId: document.getElementById('studentId').value,
+                program: document.getElementById('program').value,
+                phone: document.getElementById('phone').value || '',
+                address: document.getElementById('address').value || '',
+                status: 'pending',
+                submittedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                ipAddress: 'recorded' // In production, capture actual IP
+            };
+
+            // Add to Firestore
+            db.collection("applications").add(enrollmentData)
+                .then((docRef) => {
+                    alert(`Application submitted successfully! Your reference ID: ${docRef.id}`);
+                    document.getElementById('enrollmentForm').reset();
+                })
+                .catch((error) => {
+                    console.error("Error submitting application: ", error);
+                    alert("Error submitting application. Please try again.");
+                });
+        });
+
+        // Login functionality
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Real authentication with Firebase
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Check user role and redirect
+                    const user = userCredential.user;
+                    
+                    // In a real system, you'd check user role from Firestore
+                    // For this example, we'll check email pattern
+                    if (email.includes('admin') || email.includes('faculty')) {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'portal.html';
+                    }
+                })
+                .catch((error) => {
+                    alert(`Login failed: ${error.message}`);
+                });
+        });
+    </script>
+</body>
+</html>
